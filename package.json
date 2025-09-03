@@ -1,0 +1,17 @@
+{
+  "name": "production-automation",
+  "version": "1.0.0",
+  "description": "Автоматизація запуску виробництв на платформі Hesh",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": ["automation", "playwright", "production"],
+  "author": "Your Name",
+  "license": "MIT"
+}
