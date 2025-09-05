@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); 
 const { chromium } = require('playwright');
 const fs = require('fs');
 
@@ -25,40 +25,42 @@ function textSelector(tag, texts) {
 }
 
 (async () => {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
-  const page = await browser.newPage({
-    viewport: { width: 1280, height: 800 },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
-  });
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
 
   try {
+    // -----------------
     // Авторизація
+    // -----------------
     await page.goto('https://splem.hesh.app/login', { waitUntil: 'networkidle' });
 
-    const emailInput = page.locator(`input[id="${dict.email}"], input[id="${dict.email[1]}"]`);
-    await emailInput.waitFor({ state: 'visible', timeout: 30000 });
+    // Чекаємо поле email (ua/en варіанти)
+    const emailInput = page.locator(
+      `input[id="${dict.email[0]}"], input[id="${dict.email[1]}"]`
+    );
+    await emailInput.waitFor({ state: 'visible', timeout: 10000 });
     await emailInput.fill(process.env.LOGIN_EMAIL);
 
-    const passwordInput = page.locator(`input[id="${dict.password}"], input[id="${dict.password[1]}"]`);
-    await passwordInput.waitFor({ state: 'visible', timeout: 30000 });
+    // Чекаємо поле password (ua/en варіанти)
+    const passwordInput = page.locator(
+      `input[id="${dict.password[0]}"], input[id="${dict.password[1]}"]`
+    );
+    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
     await passwordInput.fill(process.env.LOGIN_PASSWORD);
 
+    // Сабмітимо форму і чекаємо переходу
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
+      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 }),
       page.click('button[type="submit"]'),
     ]);
 
+    // -----------------
     // Вибір компанії (якщо є)
+    // -----------------
     if (page.url().includes('/select-company')) {
-      const btnCount = await page.locator('button:has-text("Splem")').count();
-      if (btnCount > 0) {
-        await page.click('button:has-text("Splem")');
-        await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 });
-      }
+      await page.waitForSelector('button:has-text("Splem")', { timeout: 10000 });
+      await page.click('button:has-text("Splem")');
+      await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 });
     }
 
     // -----------------
@@ -90,6 +92,7 @@ function textSelector(tag, texts) {
       const checkbox = await wrapper.locator('input.PrivateSwitchBase-input[type="checkbox"]').elementHandle();
       if (!checkbox) continue;
 
+      // Використовуємо JS клік по прихованому input
       await page.evaluate((el) => {
         el.click();
       }, checkbox);
@@ -97,59 +100,50 @@ function textSelector(tag, texts) {
       // Перевіряємо, чи став checked
       const isChecked = await wrapper.locator('input.PrivateSwitchBase-input[type="checkbox"]').isChecked();
       if (isChecked) selectedCount++;
-      await page.waitForTimeout(200);
+
+      await page.waitForTimeout(200); // пауза після кліку
     }
 
     console.log(`🔍 Вибрано батьківських виробництв: ${selectedCount}`);
 
+    // -----------------
     // Натискаємо кнопку "Запуск"/"Launch"
-    const launchButton = page.locator('#action_items_container div.action-item_action_item__YpJs1.action-item_blue__eS5V2');
-    if ((await launchButton.count()) === 0) {
-      console.log('ℹ️ Не знайдено кнопки "Запуск"/"Launch"');
-      await page.screenshot({ path: 'no-launch-btn.png', fullPage: true });
-      return;
-    }
-    await launchButton.first().scrollIntoViewIfNeeded();
-    await launchButton.first().click({ force: true });
+    // -----------------
+    const launchButton = page.locator(
+      '#action_items_container div.action-item_action_item__YpJs1.action-item_blue__eS5V2'
+    ).first();
+    await launchButton.waitFor({ state: 'visible', timeout: 10000 });
+    await launchButton.scrollIntoViewIfNeeded();
+    await launchButton.click({ force: true });
     console.log(`✅ Кнопка "Запуск"/"Launch" натиснута`);
 
+    // Робимо скріншот після завантаження сторінки
     await page.screenshot({ path: 'screenshot.png', fullPage: true });
     console.log(`📸 Скриншот збережено як screenshot.png`);
 
+    // -----------------
     // Модальне вікно
-    const modalRoot = page.locator('div.MuiDialog-root.MuiModal-root');
-    if ((await modalRoot.count()) === 0) {
-      console.log('ℹ️ Не знайдено модальне вікно');
-      await page.screenshot({ path: 'no-modal.png', fullPage: true });
-      return;
-    }
-    const modal = modalRoot.first();
-    const chipsContainer = modal.locator('div.products-launch-modal-header_chips_container__c2uGd');
-    if ((await chipsContainer.count()) === 0) {
-      console.log('ℹ️ Не знайдено чіпси продуктів');
-      await page.screenshot({ path: 'no-chips.png', fullPage: true });
-      return;
-    }
+    // -----------------
+    await page.waitForSelector('div.MuiDialog-root.MuiModal-root', { timeout: 10000 });
+    const modalRoot = page.locator('div.MuiDialog-root.MuiModal-root').first();
+    const chipsContainer = modalRoot.locator('div.products-launch-modal-header_chips_container__c2uGd');
     await chipsContainer.waitFor({ state: 'visible', timeout: 10000 });
 
     const productChips = chipsContainer.locator(':scope > div');
     const chipCount = await productChips.count();
-    if (chipCount === 0) {
-      console.log('ℹ️ Не знайдено продуктів у модалці — нічого запускати.');
-      await page.screenshot({ path: 'no-products.png', fullPage: true });
-      return;
-    }
     console.log(`🔍 Знайдено ${chipCount} продуктів у модалці`);
 
     let childProcessedCount = 0;
+
     for (let i = 0; i < chipCount; i++) {
       const chip = productChips.nth(i);
       await chip.click({ timeout: 3000 }).catch(() => console.warn(`⚠️ Не вдалося вибрати продукт ${i+1}`));
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1000); // пауза після кліку на чіп
 
-      const containers = modal.locator('.production-item_container__GANbW');
+      const containers = modalRoot.locator('.production-item_container__GANbW');
       const containersCount = await containers.count();
 
+      // Спочатку визначаємо, чи є батьківські і дочірні контейнери
       let hasParentContainers = false;
       let childContainers = [];
 
@@ -158,6 +152,7 @@ function textSelector(tag, texts) {
         const isChild = (await container.locator(
           dict.inheritAttributes.map(t => `b.production-item_checkbox_title__Rc6Wx:has-text("${t}")`).join(", ")
         ).count()) > 0;
+
         if (isChild) {
           childContainers.push(j);
         } else {
@@ -167,12 +162,16 @@ function textSelector(tag, texts) {
 
       console.log(`📊 Продукт ${i+1}: батьківських - ${hasParentContainers ? 'так' : 'ні'}, дочірних - ${childContainers.length}`);
 
+      // Логіка обробки згідно з вимогами:
       if (hasParentContainers && childContainers.length > 0) {
         console.log(`🎯 Обробляємо дочірні контейнери (батьківські пропускаємо)`);
+
         for (const childIndex of childContainers) {
           const container = containers.nth(childIndex);
           const prodButtons = container.locator(textSelector("button", dict.productionButton));
+
           if ((await prodButtons.count()) === 0) continue;
+
           await prodButtons.first().click({ force: true, timeout: 3000 });
           childProcessedCount++;
           console.log(`✅ Клікнуто "Виробництво" для дочірнього контейнера ${childIndex + 1}`);
@@ -185,13 +184,16 @@ function textSelector(tag, texts) {
       } else {
         console.log(`❓ Незрозуміла структура продукту ${i+1} - пропускаємо`);
       }
-      await page.waitForTimeout(700);
+
+      await page.waitForTimeout(700); // пауза перед переходом до наступного чіпса
     }
 
     console.log(`🎯 Загалом оброблено контейнерів: ${childProcessedCount}`);
 
+    // -----------------
     // Підтверджуємо запуск
-    const modalLaunchButton = modal.locator(
+    // -----------------
+    const modalLaunchButton = modalRoot.locator(
       textSelector("button.products-launch-modal-footer_launchButton__Cmg78", dict.launch)
     ).first();
 
@@ -216,12 +218,11 @@ function textSelector(tag, texts) {
 
     const timestamp = new Date().toISOString();
     fs.appendFileSync('log.txt', `✅ Запущено ${selectedCount} батьківських та оброблено ${childProcessedCount} дочірніх о ${timestamp}\n`);
+
   } catch (error) {
     const timestamp = new Date().toISOString();
     fs.appendFileSync('log.txt', `❌ Помилка о ${timestamp}: ${error.message}\n`);
-    console.error('❌ Помилка:', error);
-    console.log('URL на момент помилки:', page.url());
-    console.log('HTML сторінки на момент помилки:', await page.content());
+    console.error(error);
   } finally {
     await browser.close();
   }
