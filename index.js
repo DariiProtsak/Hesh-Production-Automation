@@ -24,48 +24,38 @@ function textSelector(tag, texts) {
   return texts.map(t => `${tag}:has-text("${t}")`).join(", ");
 }
 
-(async () => {
+// Основна логіка в окремій функції
+async function runAutomation() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
   try {
-    // -----------------
-    // Авторизація
-    // -----------------
+    // Весь ваш існуючий код авторизації, переходів, кліків, з логуванням і скрінами
     await page.goto('https://splem.hesh.app/sign-in', { waitUntil: 'networkidle' });
 
-    // Чекаємо поле email (ua/en варіанти)
     const emailInput = page.locator(
       `input[id="${dict.email[0]}"], input[id="${dict.email[1]}"], input[placeholder*="email"], input[placeholder*="Електронна"]`
     );
     await emailInput.waitFor({ state: 'visible', timeout: 30000 });
     await emailInput.fill(process.env.LOGIN_EMAIL);
 
-    // Чекаємо поле password (ua/en варіанти)
     const passwordInput = page.locator(
       `input[id="${dict.password[0]}"], input[id="${dict.password[1]}"], input[placeholder*="password"], input[placeholder*="пароль"]`
     );
     await passwordInput.waitFor({ state: 'visible', timeout: 30000 });
     await passwordInput.fill(process.env.LOGIN_PASSWORD);
 
-    // Сабмітимо форму і чекаємо переходу
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
       page.click('button[type="submit"]'),
     ]);
 
-    // -----------------
-    // Вибір компанії (якщо є)
-    // -----------------
     if (page.url().includes('/select-company')) {
       await page.waitForSelector('button:has-text("Splem")', { timeout: 10000 });
       await page.click('button:has-text("Splem")');
       await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 });
     }
 
-    // -----------------
-    // Перехід на сторінку виробництв
-    // -----------------
     await page.goto('https://splem.hesh.app/production', { waitUntil: 'networkidle' });
     await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 10000 });
     await page.screenshot({ path: 'screenshot.png', fullPage: true });
@@ -79,38 +69,25 @@ function textSelector(tag, texts) {
 
     for (let i = 0; i < count; i++) {
       const wrapper = wrappers.nth(i);
-
-      // Пропускаємо дочірні
       const isChildMarker = await wrapper.locator(
         dict.inheritAttributes.map(t => `b.production-item_checkbox_title__Rc6Wx:has-text("${t}")`).join(", ")
       ).count();
       if (isChildMarker > 0) continue;
 
-      // Перевірка статусу "Зробити"
       const statusExists = await wrapper.locator('.status-selector_to_do__mE-UQ').count();
       if (statusExists === 0) continue;
 
-      // Вибираємо input
       const checkbox = await wrapper.locator('input.PrivateSwitchBase-input[type="checkbox"]').elementHandle();
       if (!checkbox) continue;
 
-      // Використовуємо JS клік по прихованому input
-      await page.evaluate((el) => {
-        el.click();
-      }, checkbox);
-
-      // Перевіряємо, чи став checked
+      await page.evaluate(el => el.click(), checkbox);
       const isChecked = await wrapper.locator('input.PrivateSwitchBase-input[type="checkbox"]').isChecked();
       if (isChecked) selectedCount++;
-
-      await page.waitForTimeout(200); // пауза після кліку
+      await page.waitForTimeout(200);
     }
 
     console.log(`🔍 Вибрано батьківських виробництв: ${selectedCount}`);
 
-    // -----------------
-    // Натискаємо кнопку "Запуск"/"Launch"
-    // -----------------
     const launchButton = page.locator(
       '#action_items_container div.action-item_action_item__YpJs1.action-item_blue__eS5V2'
     ).first();
@@ -118,29 +95,36 @@ function textSelector(tag, texts) {
     await launchButton.scrollIntoViewIfNeeded();
     await launchButton.click({ force: true });
     console.log(`✅ Кнопка "Запуск"/"Launch" натиснута`);
-
-    // Робимо скріншот після завантаження сторінки
     await page.screenshot({ path: 'screenshot.png', fullPage: true });
     console.log(`📸 Скриншот збережено як screenshot.png`);
 
-    // -----------------
-    // Модальне вікно
-    // -----------------
-    await page.waitForSelector('div.MuiDialog-root.MuiModal-root', { timeout: 10000 });
+    try {
+      await page.waitForSelector('div.MuiDialog-root.MuiModal-root', { timeout: 10000 });
+    } catch {
+      console.log('ℹ️ Модальне вікно не зʼявилось, нічого запускати');
+      await browser.close();
+      return;
+    }
+
     const modalRoot = page.locator('div.MuiDialog-root.MuiModal-root').first();
     const chipsContainer = modalRoot.locator('div.products-launch-modal-header_chips_container__c2uGd');
-    await chipsContainer.waitFor({ state: 'visible', timeout: 10000 });
+    try {
+      await chipsContainer.waitFor({ state: 'visible', timeout: 10000 });
+    } catch {
+      console.log('ℹ️ Контейнер з продуктами у модалці не зʼявився');
+      await browser.close();
+      return;
+    }
 
     const productChips = chipsContainer.locator(':scope > div');
     const chipCount = await productChips.count();
     console.log(`🔍 Знайдено ${chipCount} продуктів у модалці`);
-
     let childProcessedCount = 0;
 
     for (let i = 0; i < chipCount; i++) {
       const chip = productChips.nth(i);
       await chip.click({ timeout: 3000 }).catch(() => console.warn(`⚠️ Не вдалося вибрати продукт ${i + 1}`));
-      await page.waitForTimeout(1000); // пауза після кліку на чіп
+      await page.waitForTimeout(1000);
 
       const containers = modalRoot.locator('.production-item_container__GANbW');
       const containersCount = await containers.count();
@@ -185,14 +169,11 @@ function textSelector(tag, texts) {
         console.log(`❓ Незрозуміла структура продукту ${i + 1} - пропускаємо`);
       }
 
-      await page.waitForTimeout(700); // пауза перед переходом до наступного чіпса
+      await page.waitForTimeout(700);
     }
 
     console.log(`🎯 Загалом оброблено контейнерів: ${childProcessedCount}`);
 
-    // -----------------
-    // Підтверджуємо запуск
-    // -----------------
     const modalLaunchButton = modalRoot.locator(
       textSelector("button.products-launch-modal-footer_launchButton__Cmg78", dict.launch)
     ).first();
@@ -209,7 +190,7 @@ function textSelector(tag, texts) {
       await productLaunchButton.scrollIntoViewIfNeeded();
       await productLaunchButton.click({ force: true });
       console.log(`✅ Кнопка "Запуск виробництва"/"Launch production" натиснута`);
-    } catch (err) {
+    } catch {
       console.error(`❌ Не вдалося натиснути "Запуск виробництва"/"Launch production"`);
     }
 
@@ -225,5 +206,18 @@ function textSelector(tag, texts) {
     console.error(error);
   } finally {
     await browser.close();
+  }
+}
+
+// Головна функція з нескінченним циклом та паузою
+(async () => {
+  while (true) {
+    try {
+      await runAutomation();
+    } catch (err) {
+      console.error('Помилка в автоматизації:', err);
+    }
+    // Пауза 5 хвилин перед наступним запуском
+    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
   }
 })();

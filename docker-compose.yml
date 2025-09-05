@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  production-automation:
+    build: .
+    environment:
+      # Значення не задавати тут, а передавати на сервері Render!
+      LOGIN_EMAIL: ""
+      LOGIN_PASSWORD: ""
+    restart: unless-stopped
