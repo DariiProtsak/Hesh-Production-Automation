@@ -33,27 +33,35 @@ function textSelector(tag, texts) {
     // Авторизація
     // -----------------
     await page.goto('https://splem.hesh.app/sign-in', { waitUntil: 'networkidle' });
-
+  
     // Чекаємо поле email (ua/en варіанти)
     const emailInput = page.locator(
-      `input[id="${dict.email[0]}"], input[id="${dict.email[1]}"]`
+      `input[id="${dict.email[0]}"], input[id="${dict.email[1]}"], input[placeholder*="email"], input[placeholder*="Електронна"]`
     );
-    await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+    await emailInput.waitFor({ state: 'visible', timeout: 30000 });
     await emailInput.fill(process.env.LOGIN_EMAIL);
-
+  
     // Чекаємо поле password (ua/en варіанти)
     const passwordInput = page.locator(
-      `input[id="${dict.password[0]}"], input[id="${dict.password[1]}"]`
+      `input[id="${dict.password[0]}"], input[id="${dict.password[1]}"], input[placeholder*="password"], input[placeholder*="пароль"]`
     );
-    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    await passwordInput.waitFor({ state: 'visible', timeout: 30000 });
     await passwordInput.fill(process.env.LOGIN_PASSWORD);
-
+  
     // Сабмітимо форму і чекаємо переходу
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 }),
+      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
       page.click('button[type="submit"]'),
     ]);
-
+  
+  } catch (error) {
+    console.error('Помилка на етапі авторизації:', error);
+    console.log('Поточний URL:', page.url());
+    const htmlContent = await page.content();
+    require('fs').writeFileSync('error_login_page.html', htmlContent);
+    throw error;
+  }
+  
     // -----------------
     // Вибір компанії (якщо є)
     // -----------------
