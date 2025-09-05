@@ -25,8 +25,15 @@ function textSelector(tag, texts) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+  });
 
   try {
     // -----------------
@@ -34,23 +41,20 @@ function textSelector(tag, texts) {
     // -----------------
     await page.goto('https://splem.hesh.app/login', { waitUntil: 'networkidle' });
 
-    // Чекаємо поле email (ua/en варіанти)
     const emailInput = page.locator(
       `input[id="${dict.email[0]}"], input[id="${dict.email[1]}"]`
     );
-    await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+    await emailInput.waitFor({ state: 'visible', timeout: 30000 });
     await emailInput.fill(process.env.LOGIN_EMAIL);
 
-    // Чекаємо поле password (ua/en варіанти)
     const passwordInput = page.locator(
       `input[id="${dict.password[0]}"], input[id="${dict.password[1]}"]`
     );
-    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    await passwordInput.waitFor({ state: 'visible', timeout: 30000 });
     await passwordInput.fill(process.env.LOGIN_PASSWORD);
 
-    // Сабмітимо форму і чекаємо переходу
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 }),
+      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
       page.click('button[type="submit"]'),
     ]);
 
@@ -58,7 +62,7 @@ function textSelector(tag, texts) {
     // Вибір компанії (якщо є)
     // -----------------
     if (page.url().includes('/select-company')) {
-      await page.waitForSelector('button:has-text("Splem")', { timeout: 10000 });
+      await page.waitForSelector('button:has-text("Splem")', { timeout: 15000 });
       await page.click('button:has-text("Splem")');
       await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 });
     }
@@ -67,7 +71,7 @@ function textSelector(tag, texts) {
     // Перехід на сторінку виробництв
     // -----------------
     await page.goto('https://splem.hesh.app/production', { waitUntil: 'networkidle' });
-    await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 10000 });
+    await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 15000 });
     const selectButton = page.locator('.actions-panel_select_button__-vGX7').first();
     await selectButton.click({ force: true });
 
@@ -222,7 +226,9 @@ function textSelector(tag, texts) {
   } catch (error) {
     const timestamp = new Date().toISOString();
     fs.appendFileSync('log.txt', `❌ Помилка о ${timestamp}: ${error.message}\n`);
-    console.error(error);
+    console.error('❌ Помилка:', error);
+    console.log('URL на момент помилки:', page.url());
+    console.log('HTML сторінки на момент помилки:', await page.content());
   } finally {
     await browser.close();
   }
