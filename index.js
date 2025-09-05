@@ -61,20 +61,13 @@ function textSelector(tag, texts) {
       }
     }
 
+    // -----------------
     // Перехід на сторінку виробництв
+    // -----------------
     await page.goto('https://splem.hesh.app/production', { waitUntil: 'networkidle' });
-
-    // Перевірка наявності кнопки вибору виробництва
-    const selectButtons = page.locator('.actions-panel_select_button__-vGX7');
-    const selectCount = await selectButtons.count();
-    if (selectCount > 0) {
-      await selectButtons.first().click({ force: true });
-      console.log(`✅ Кнопка "Вибір" натиснута`);
-    } else {
-      console.log('ℹ️ Не знайдено кнопки вибору виробництва — нічого не обробляю');
-      await page.screenshot({ path: 'no-actions-panel.png', fullPage: true });
-      return;
-    }
+    await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 10000 });
+    const selectButton = page.locator('.actions-panel_select_button__-vGX7').first();
+    await selectButton.click({ force: true });
 
     const wrappers = page.locator('.production-checkbox-wrapper_production_wrapper__tF6xz');
     const count = await wrappers.count();
