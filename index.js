@@ -32,7 +32,7 @@ function textSelector(tag, texts) {
     // -----------------
     // Авторизація
     // -----------------
-    await page.goto('https://splem.hesh.app/login', { waitUntil: 'networkidle' });
+    await page.goto('https://splem.hesh.app/sign-in', { waitUntil: 'networkidle' });
 
     // Чекаємо поле email (ua/en варіанти)
     const emailInput = page.locator(
