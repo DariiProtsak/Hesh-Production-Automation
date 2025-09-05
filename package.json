@@ -4,15 +4,19 @@
   "description": "Автоматизація запуску виробництв на платформі Hesh",
   "main": "index.js",
   "scripts": {
-    "postinstall": "npx playwright install",
     "start": "node index.js",
+    "postinstall": "npx playwright install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "playwright": "^1.40.0",
     "dotenv": "^16.3.1"
   },
-  "keywords": ["automation", "playwright", "production"],
+  "keywords": [
+    "automation",
+    "playwright",
+    "production"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }
