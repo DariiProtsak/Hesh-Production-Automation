@@ -1,4 +1,4 @@
-require('dotenv').config(); 
+require('dotenv').config();
 const { chromium } = require('playwright');
 const fs = require('fs');
 
@@ -33,35 +33,27 @@ function textSelector(tag, texts) {
     // Авторизація
     // -----------------
     await page.goto('https://splem.hesh.app/sign-in', { waitUntil: 'networkidle' });
-  
+
     // Чекаємо поле email (ua/en варіанти)
     const emailInput = page.locator(
       `input[id="${dict.email[0]}"], input[id="${dict.email[1]}"], input[placeholder*="email"], input[placeholder*="Електронна"]`
     );
     await emailInput.waitFor({ state: 'visible', timeout: 30000 });
     await emailInput.fill(process.env.LOGIN_EMAIL);
-  
+
     // Чекаємо поле password (ua/en варіанти)
     const passwordInput = page.locator(
       `input[id="${dict.password[0]}"], input[id="${dict.password[1]}"], input[placeholder*="password"], input[placeholder*="пароль"]`
     );
     await passwordInput.waitFor({ state: 'visible', timeout: 30000 });
     await passwordInput.fill(process.env.LOGIN_PASSWORD);
-  
+
     // Сабмітимо форму і чекаємо переходу
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
       page.click('button[type="submit"]'),
     ]);
-  
-  } catch (error) {
-    console.error('Помилка на етапі авторизації:', error);
-    console.log('Поточний URL:', page.url());
-    const htmlContent = await page.content();
-    require('fs').writeFileSync('error_login_page.html', htmlContent);
-    throw error;
-  }
-  
+
     // -----------------
     // Вибір компанії (якщо є)
     // -----------------
@@ -145,13 +137,12 @@ function textSelector(tag, texts) {
 
     for (let i = 0; i < chipCount; i++) {
       const chip = productChips.nth(i);
-      await chip.click({ timeout: 3000 }).catch(() => console.warn(`⚠️ Не вдалося вибрати продукт ${i+1}`));
+      await chip.click({ timeout: 3000 }).catch(() => console.warn(`⚠️ Не вдалося вибрати продукт ${i + 1}`));
       await page.waitForTimeout(1000); // пауза після кліку на чіп
 
       const containers = modalRoot.locator('.production-item_container__GANbW');
       const containersCount = await containers.count();
 
-      // Спочатку визначаємо, чи є батьківські і дочірні контейнери
       let hasParentContainers = false;
       let childContainers = [];
 
@@ -168,9 +159,8 @@ function textSelector(tag, texts) {
         }
       }
 
-      console.log(`📊 Продукт ${i+1}: батьківських - ${hasParentContainers ? 'так' : 'ні'}, дочірних - ${childContainers.length}`);
+      console.log(`📊 Продукт ${i + 1}: батьківських - ${hasParentContainers ? 'так' : 'ні'}, дочірних - ${childContainers.length}`);
 
-      // Логіка обробки згідно з вимогами:
       if (hasParentContainers && childContainers.length > 0) {
         console.log(`🎯 Обробляємо дочірні контейнери (батьківські пропускаємо)`);
 
@@ -190,7 +180,7 @@ function textSelector(tag, texts) {
       } else if (hasParentContainers && childContainers.length === 0) {
         console.log(`⏭️ Знайдено тільки батьківські контейнери - пропускаємо`);
       } else {
-        console.log(`❓ Незрозуміла структура продукту ${i+1} - пропускаємо`);
+        console.log(`❓ Незрозуміла структура продукту ${i + 1} - пропускаємо`);
       }
 
       await page.waitForTimeout(700); // пауза перед переходом до наступного чіпса
