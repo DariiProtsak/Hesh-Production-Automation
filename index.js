@@ -26,8 +26,7 @@ function textSelector(tag, texts) {
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage(); 
-  page.setViewportSize({ width: 1920, height: 1080 });
+  const page = await browser.newPage();
 
   try {
     // -----------------
@@ -68,8 +67,7 @@ function textSelector(tag, texts) {
     // Перехід на сторінку виробництв
     // -----------------
     await page.goto('https://splem.hesh.app/production', { waitUntil: 'networkidle' });
-    await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 10000 }); 
-
+    await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 10000 });
     const selectButton = page.locator('.actions-panel_select_button__-vGX7').first();
     await selectButton.click({ force: true });
 
@@ -118,6 +116,10 @@ function textSelector(tag, texts) {
     await launchButton.scrollIntoViewIfNeeded();
     await launchButton.click({ force: true });
     console.log(`✅ Кнопка "Запуск"/"Launch" натиснута`);
+
+    // Робимо скріншот після завантаження сторінки
+    await page.screenshot({ path: 'screenshot.png', fullPage: true });
+    console.log(`📸 Скриншот збережено як screenshot.png`);
 
     // -----------------
     // Модальне вікно
@@ -210,6 +212,9 @@ function textSelector(tag, texts) {
     } catch (err) {
       console.error(`❌ Не вдалося натиснути "Запуск виробництва"/"Launch production"`);
     }
+
+    await page.screenshot({ path: 'screenshot.png', fullPage: true });
+    console.log(`📸 Скриншот збережено як screenshot.png`);
 
     const timestamp = new Date().toISOString();
     fs.appendFileSync('log.txt', `✅ Запущено ${selectedCount} батьківських та оброблено ${childProcessedCount} дочірніх о ${timestamp}\n`);
