@@ -68,6 +68,8 @@ function textSelector(tag, texts) {
     // -----------------
     await page.goto('https://splem.hesh.app/production', { waitUntil: 'networkidle' });
     await page.waitForSelector('.actions-panel_select_button__-vGX7', { timeout: 10000 });
+    await page.screenshot({ path: 'screenshot.png', fullPage: true });
+    console.log(`📸 Скриншот збережено як screenshot.png`);
     const selectButton = page.locator('.actions-panel_select_button__-vGX7').first();
     await selectButton.click({ force: true });
 
